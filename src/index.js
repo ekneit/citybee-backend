@@ -35,12 +35,20 @@ app.post('/models', async (req, res) => {
     }
     try {
         const con = await mysql.createConnection(mysqlConfig);
+        const [isModelExist] = await con.execute(`SELECT * from models WHERE name = ${mysql.escape(req.body.name.trim().toUpperCase())} `);
+
+        if (isModelExist.length > 0) {
+            con.end();
+            return res.status(400).send({ error: 'Model already exists!' });
+
+        }
+
         const [result] = await con.execute(`INSERT INTO models(name, hour_price) VALUE(${mysql.escape(req.body.name.toUpperCase())},${mysql.escape(req.body.hourPrice)})`)
         con.end();
         if (!result.insertId) {
             return res.status(500).send({ error: 'Failed please contact admin' });
         }
-        return res.send({ message: result.insertId });
+        return res.send({ message: 'Added successful' });
     } catch (error) {
         console.log(error);
         return res.status(500).send({ error: 'Unexpexted error' });
@@ -77,46 +85,29 @@ app.post('/vehicles', async (req, res) => {
     }
     try {
         const con = await mysql.createConnection(mysqlConfig);
+        const [isVehiclesExist] = await con.execute(`SELECT * from vehicles WHERE number_plate = ${mysql.escape(req.body.numberPlate.trim().toUpperCase())} AND country_location = ${mysql.escape(req.body.countryLocation.trim().toUpperCase())} `);
+
+        if (isVehiclesExist.length > 0) {
+            con.end();
+            return res.status(400).send({ error: 'Vehicles already exists!' });
+        }
         const [result] = await con.execute(`INSERT INTO vehicles  (model_id, number_plate, country_location) 
         VALUES (${mysql.escape(req.body.moduleID)}, ${mysql.escape(req.body.numberPlate.toUpperCase())}, ${mysql.escape(req.body.countryLocation.toUpperCase())});`);
+        con.end();
         if (!result.insertId) {
             return res.status(500).send({ error: 'Failed please contact admin' });
         }
-        return res.send({ message: result.insertId });
+        return res.send({ message: 'Added successful' });
     } catch (error) {
         console.log(error);
         return res.status(500).send({ error: 'Unexpexted error' });
     }
 });
-app.get('/vehicles/lt', async (req, res) => {
+app.get('/vehicles/:country', async (req, res) => {
 
     try {
         const con = await mysql.createConnection(mysqlConfig);
-        const [results] = await con.execute(`SELECT vehicles.id, models.name, models.hour_price * ${pvm} AS hour_price_with_pvp, vehicles.number_plate,vehicles.country_location  FROM vehicles INNER JOIN  models ON models.id = vehicles.model_ID WHERE vehicles.country_location = 'LT' `);
-        con.end();
-        return res.send(results);
-    } catch (error) {
-        console.log(error);
-        return res.status(500).send({ error: 'Unexpexted error' });
-    }
-});
-app.get('/vehicles/lv', async (req, res) => {
-
-    try {
-        const con = await mysql.createConnection(mysqlConfig);
-        const [results] = await con.execute(`SELECT vehicles.id, models.name, models.hour_price * ${pvm} AS hour_price_with_pvp, vehicles.number_plate,vehicles.country_location  FROM vehicles INNER JOIN  models ON models.id = vehicles.model_ID WHERE vehicles.country_location = 'LV' `);
-        con.end();
-        return res.send(results);
-    } catch (error) {
-        console.log(error);
-        return res.status(500).send({ error: 'Unexpexted error' });
-    }
-});
-app.get('/vehicles/ee', async (req, res) => {
-
-    try {
-        const con = await mysql.createConnection(mysqlConfig);
-        const [results] = await con.execute(`SELECT vehicles.id, models.name, models.hour_price * ${pvm} AS hour_price_with_pvp, vehicles.number_plate,vehicles.country_location  FROM vehicles INNER JOIN  models ON models.id = vehicles.model_ID WHERE vehicles.country_location = 'EE' `);
+        const [results] = await con.execute(`SELECT vehicles.id, models.name, models.hour_price * ${pvm} AS hour_price_with_pvp, vehicles.number_plate,vehicles.country_location  FROM vehicles INNER JOIN  models ON models.id = vehicles.model_ID WHERE vehicles.country_location = ${mysql.escape(req.params.country)} `);
         con.end();
         return res.send(results);
     } catch (error) {
